@@ -1,5 +1,6 @@
 CREATE DATABASE funciones;
 USE funciones;
+-- drop database funciones;
 
 CREATE TABLE departamento (
 id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -53,18 +54,15 @@ SELECT UPPER(CONCAT_WS(' ',nombre,' ',apellido1,' ',apellido2)) AS NOMBRES FROM 
 SELECT LOWER(CONCAT_WS(' ',nombre,' ',apellido1,' ',apellido2)) AS NOMBRES FROM empleado; -- 9. Lista el nombre y apellidos de los empleados en una única columna, convirtiendo todos los caracteres en minúscula.
 SELECT id, REGEXP_REPLACE( nif,'[^A-Z]', '') AS letra , REGEXP_REPLACE( nif,'[^0-9]', '') as codigo from empleado; -- 10. Lista el identificador de los empleados junto al nif, pero el nif deberá aparecer en dos columnas, una mostrará únicamente los dígitos del nif y la otra la letra.
 DELIMITER //
-CREATE FUNCTION calcular_presupuesto_actual(id_departamento INT) 
+CREATE FUNCTION calcular_presupuesto_actual(presupuesto double, gastos double) 
 RETURNS DOUBLE
 DETERMINISTIC
 BEGIN
-    DECLARE presupuesto_inicial DOUBLE;
-    DECLARE gastos DOUBLE;
-    SELECT  presupuesto, gastos
-    INTO presupuesto_inicial, gastos;
-    RETURN (presupuesto_inicial - gastos);
+    RETURN presupuesto - gastos;
 END //
 DELIMITER ; 
-SELECT nombre AS departamento,(presupuesto - gastos) AS presupuesto_actual FROM departamento; -- 11. Lista el nombre de cada departamento y el valor del presupuesto actual del que dispone. Para calcular este dato tendrá que restar al valor del presupuesto inicial (columna presupuesto) los gastos que se han generado (columna gastos). Tenga en cuenta que en algunos casos pueden existir valores negativos. Utilice un alias apropiado para la nueva columna columna que está calculando.
+-- drop function calcular_presupuesto_actual;
+SELECT nombre AS departamento,calcular_presupuesto_actual(presupuesto, gastos) AS presupuesto_actual FROM departamento; -- 11. Lista el nombre de cada departamento y el valor del presupuesto actual del que dispone. Para calcular este dato tendrá que restar al valor del presupuesto inicial (columna presupuesto) los gastos que se han generado (columna gastos). Tenga en cuenta que en algunos casos pueden existir valores negativos. Utilice un alias apropiado para la nueva columna columna que está calculando.
 SELECT nombre,presupuesto FROM departamento ORDER BY presupuesto ASC; -- 12. Lista el nombre de los departamentos y el valor del presupuesto actual ordenado de forma ascendente.
 SELECT nombre FROM departamento ORDER BY nombre ASC;-- 13. Lista el nombre de todos los departamentos ordenados de forma ascendente.
 SELECT nombre FROM departamento ORDER BY nombre DESC;-- 14. Lista el nombre de todos los departamentos ordenados de forma descendente.
@@ -93,10 +91,10 @@ SELECT nombre,apellido1,apellido2,nif FROM empleado WHERE id_departamento IN (2,
 
  -- Consultas multitabla (Composición interna)
  
-SELECT empleado.*, departamento.* FROM empleado INNER JOIN departamento ON empleado.id_departamento = departamento.id; -- 1. Devuelve un listado con los empleados y los datos de los departamentos donde trabaja cada uno.
-SELECT empleado.*, departamento.* FROM empleado INNER JOIN departamento ON empleado.id_departamento = departamento.id ORDER BY departamento.nombre ASC, empleado.apellido1 ASC, empleado.apellido2 ASC, empleado.nombre ASC; -- 2. Devuelve un listado con los empleados y los datos de los departamentos donde trabaja cada uno. Ordena el resultado, en primer lugar por el nombre del departamento (en orden alfabético) y en segundo lugar por los apellidos y el nombre de los empleados.
+SELECT * FROM empleado INNER JOIN departamento ON empleado.id_departamento = departamento.id; -- 1. Devuelve un listado con los empleados y los datos de los departamentos donde trabaja cada uno.
+SELECT * FROM empleado INNER JOIN departamento ON empleado.id_departamento = departamento.id ORDER BY departamento.nombre ASC, empleado.apellido1 ASC, empleado.apellido2 ASC, empleado.nombre ASC; -- 2. Devuelve un listado con los empleados y los datos de los departamentos donde trabaja cada uno. Ordena el resultado, en primer lugar por el nombre del departamento (en orden alfabético) y en segundo lugar por los apellidos y el nombre de los empleados.
 SELECT departamento.id, departamento.nombre FROM departamento INNER JOIN empleado ON departamento.id = empleado.id_departamento GROUP BY departamento.id, departamento.nombre; -- 3. Devuelve un listado con el identificador y el nombre del departamento, solamente de aquellos departamentos que tienen empleados.
-SELECT departamento.id, departamento.nombre, departamento.presupuesto FROM departamento INNER JOIN empleado ON departamento.id = empleado.id_departamento GROUP BY departamento.id, departamento.nombre, departamento.presupuesto; -- 4. Devuelve un listado con el identificador, el nombre del departamento y el valor del presupuesto actual del que dispone, solamente de aquellos departamentos que tienen empleados. El valor del presupuesto actual lo puede calcular restando al valor del presupuesto inicial (columna presupuesto) el valor de los gastos que ha generado (columna gastos).
+SELECT departamento.id, departamento.nombre, calcular_presupuesto_actual(presupuesto, gastos) AS presupuesto_actual FROM departamento INNER JOIN empleado ON empleado.id_departamento = departamento.id; -- 4. Devuelve un listado con el identificador, el nombre del departamento y el valor del presupuesto actual del que dispone, solamente de aquellos departamentos que tienen empleados. El valor del presupuesto actual lo puede calcular restando al valor del presupuesto inicial (columna presupuesto) el valor de los gastos que ha generado (columna gastos).
 SELECT departamento.nombre FROM departamento INNER JOIN empleado ON departamento.id = empleado.id_departamento WHERE nif = '38382980M'; -- 5. Devuelve el nombre del departamento donde trabaja el empleado que tiene el nif 38382980M.
 SELECT departamento.nombre FROM departamento INNER JOIN empleado ON departamento.id = empleado.id_departamento WHERE empleado.nombre = 'Pepe';-- 6. Devuelve el nombre del departamento donde trabaja el empleado Pepe Ruiz Santana.
 SELECT empleado.*,departamento.id FROM empleado LEFT JOIN departamento ON empleado.id_departamento = departamento.id WHERE departamento.nombre = 'I+D';-- 7. Devuelve un listado con los datos de los empleados que trabajan en el departamento de I+D. Ordena el resultado alfabéticamente.
@@ -108,9 +106,9 @@ SELECT DISTINCT d.nombre FROM departamento d INNER JOIN empleado e ON d.id = e.i
 
 SELECT * FROM empleado LEFT JOIN departamento ON empleado.id_departamento = departamento.id; -- 1. Devuelve un listado con todos los empleados junto con los datos de los departamentos donde trabajan. Este listado también debe incluir los empleados que no tienen ningún departamento asociado.
 SELECT * FROM empleado LEFT JOIN departamento ON empleado.id_departamento = departamento.id WHERE empleado.id_departamento IS NULL; -- 2. Devuelve un listado donde sólo aparezcan aquellos empleados que no tienen ningún departamento asociado.
-SELECT * FROM departamento LEFT JOIN empleado on empleado.id_departamento = departamento.id WHERE empleado.id_departamento IS NULL; -- 3. Devuelve un listado donde sólo aparezcan aquellos departamentos que no tienen ningún empleado asociado.
-SELECT * FROM empleado RIGHT JOIN departamento ON empleado.id_departamento = departamento.id UNION SELECT * FROM empleado RIGHT JOIN departamento ON empleado.id_departamento = departamento.id; -- 4. Devuelve un listado con todos los empleados junto con los datos de los departamentos donde trabajan. El listado debe incluir los empleados que no tienen ningún departamento asociado y los departamentos que no tienen ningún empleado asociado. Ordene el listado alfabéticamente por el nombre del departamento.
-SELECT * FROM empleado RIGHT JOIN departamento ON empleado.id_departamento = departamento.id WHERE empleado.id_departamento IS NULL UNION SELECT * FROM empleado LEFT JOIN departamento ON empleado.id_departamento = departamento.id WHERE empleado.id_departamento IS NULL; -- 5. Devuelve un listado con los empleados que no tienen ningún departamento asociado y los departamentos que no tienen ningún empleado asociado. Ordene el listado alfabéticamente por el nombre del departamento.
+SELECT * FROM departamento LEFT JOIN empleado on empleado.id_departamento = departamento.id WHERE empleado.id_departamento IS NULL;-- 3. Devuelve un listado donde sólo aparezcan aquellos departamentos que no tienen ningún empleado asociado.
+SELECT * FROM empleado RIGHT JOIN departamento ON empleado.id_departamento = departamento.id UNION SELECT * FROM empleado RIGHT JOIN departamento ON empleado.id_departamento = departamento.id ORDER BY 8;-- 4. Devuelve un listado con todos los empleados junto con los datos de los departamentos donde trabajan. El listado debe incluir los empleados que no tienen ningún departamento asociado y los departamentos que no tienen ningún empleado asociado. Ordene el listado alfabéticamente por el nombre del departamento.
+SELECT * FROM empleado RIGHT JOIN departamento ON empleado.id_departamento = departamento.id WHERE empleado.id_departamento IS NULL UNION SELECT * FROM empleado LEFT JOIN departamento ON empleado.id_departamento = departamento.id WHERE empleado.id_departamento IS NULL ORDER BY 8;-- 5. Devuelve un listado con los empleados que no tienen ningún departamento asociado y los departamentos que no tienen ningún empleado asociado. Ordene el listado alfabéticamente por el nombre del departamento.
 
 -- Consultas resumen
 
