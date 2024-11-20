@@ -190,26 +190,20 @@ DELIMITER ;
 
 CALL consultar_precio(50,200); -- precio diario y precio semanal
 
--- 5. Consultar vehículos por fechas
+-- 5. Eliminar un registro por descuento
 
 DELIMITER //
-CREATE PROCEDURE consultar_fecha(IN fecha_inicio_vehiculo DATE, fecha_fin_vehiculo DATE)
+CREATE PROCEDURE eliminar_descuento(IN id_descuentos INT)
 BEGIN
-	SELECT V.id_vehiculo, V.placa, V.modelo, T.tipo FROM Vehiculos V
-    INNER JOIN Tipo_vehiculo T ON V.id_tipoV = T.id_tipoV WHERE V.id_vehiculo NOT IN (
-		SELECT id_vehiculo FROM Alquileres 
-        WHERE (fecha_salida BETWEEN fecha_inicio_vehiculo AND fecha_fin_vehiculo) 
-        OR (fecha_llegada BETWEEN fecha_inicio_vehiculo AND fecha_fin_vehiculo) 
-    ); 
+	DELETE FROM Descuentos WHERE id_descuento = id_descuentos;
 END //
 DELIMITER ;
 
-CALL consultar_fecha('2024-01-10','2024-01-15'); -- A
+CALL eliminar_descuento(90);
 
 -- 6. Registrar un alquiler
 
 DELIMITER //
-
 CREATE PROCEDURE registrar_alquiler (IN p_id_vehiculo INT, IN p_id_cliente INT, 
 	IN p_id_empleado INT, IN p_id_sucursal INT, IN p_fecha_salida DATE, 
     IN p_fecha_esperada DATE, IN p_fecha_llegada DATE, IN p_valor_cotizado INT, 
@@ -218,7 +212,6 @@ BEGIN
     INSERT INTO Alquileres (id_vehiculo, id_cliente, id_empleado, id_sucursal, fecha_salida, fecha_esperada, fecha_llegada, valor_cotizado, valor_pagado)
     VALUES (p_id_vehiculo, p_id_cliente, p_id_empleado, p_id_sucursal, p_fecha_salida, p_fecha_esperada, p_fecha_esperada, p_valor_cotizado, p_valor_pagado);
 END //
-
 DELIMITER ;
 
 CALL registrar_alquiler(1, 100, 10, 3, '2024-12-01', '2024-12-10', '2024-12-10', 350, 350);
